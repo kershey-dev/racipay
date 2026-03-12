@@ -94,7 +94,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   decoration: const InputDecoration(
                     labelText: 'Concern Category *',
                   ),

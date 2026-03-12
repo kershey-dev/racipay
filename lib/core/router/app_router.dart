@@ -1,10 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/splash_screen.dart';
+import '../../screens/lineman/assigned_tickets_screen.dart';
+import '../../screens/lineman/completed_jobs_screen.dart';
 import '../../screens/lineman/lineman_dashboard_screen.dart';
+import '../../screens/lineman/lineman_help_screen.dart';
+import '../../screens/lineman/lineman_notifications_screen.dart';
+import '../../screens/lineman/lineman_profile_screen.dart';
+import '../../screens/lineman/lineman_ticket_detail_screen.dart';
+import '../../screens/lineman/update_status_screen.dart';
+import '../../screens/lineman/upload_proof_screen.dart';
 import '../../screens/subscriber/announcements_screen.dart';
 import '../../screens/subscriber/current_bill_screen.dart';
 import '../../screens/subscriber/invoice_detail_screen.dart';
@@ -22,30 +29,6 @@ import '../../screens/subscriber/subscription_detail_screen.dart';
 import '../../screens/subscriber/create_ticket_screen.dart';
 import '../../screens/subscriber/ticket_detail_screen.dart';
 import '../../screens/subscriber/ticket_list_screen.dart';
-import '../../core/constants/app_strings.dart';
-
-class _SimpleScaffold extends StatelessWidget {
-  final String title;
-  final Widget body;
-
-  const _SimpleScaffold({
-    required this.title,
-    required this.body,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: body,
-      ),
-    );
-  }
-}
 
 /// Global GoRouter configuration for RACIPAY.
 final GoRouter appRouter = GoRouter(
@@ -185,58 +168,51 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/lineman/tickets',
       name: 'lineman-tickets',
-      builder: (context, state) => const _SimpleScaffold(
-        title: AppStrings.assignedTicketsTitle,
-        body: Text('Tickets currently assigned to you.'),
-      ),
+      builder: (context, state) =>
+          const AssignedTicketsScreen(isTab: false),
     ),
     GoRoute(
       path: '/lineman/ticket-detail',
       name: 'lineman-ticket-detail',
-      builder: (context, state) => const _SimpleScaffold(
-        title: AppStrings.linemanTicketDetailTitle,
-        body: Text('Ticket details for field work.'),
+      builder: (context, state) => LinemanTicketDetailScreen(
+        ticket: state.extra! as dynamic,
       ),
     ),
     GoRoute(
       path: '/lineman/update-status',
       name: 'lineman-update-status',
-      builder: (context, state) => const _SimpleScaffold(
-        title: AppStrings.updateStatusTitle,
-        body: Text('Update service ticket status.'),
+      builder: (context, state) => UpdateStatusScreen(
+        ticket: state.extra! as dynamic,
       ),
     ),
     GoRoute(
       path: '/lineman/upload-proof',
       name: 'lineman-upload-proof',
-      builder: (context, state) => const _SimpleScaffold(
-        title: AppStrings.uploadProofTitle,
-        body: Text('Upload proof of completed work.'),
+      builder: (context, state) => UploadProofScreen(
+        ticket: state.extra! as dynamic,
       ),
     ),
     GoRoute(
       path: '/lineman/completed-jobs',
       name: 'lineman-completed-jobs',
-      builder: (context, state) => const _SimpleScaffold(
-        title: AppStrings.completedJobsTitle,
-        body: Text('History of completed jobs.'),
-      ),
+      builder: (context, state) =>
+          const CompletedJobsScreen(isTab: false),
     ),
     GoRoute(
       path: '/lineman/profile',
       name: 'lineman-profile',
-      builder: (context, state) => const _SimpleScaffold(
-        title: AppStrings.linemanProfileTitle,
-        body: Text('Manage your lineman profile.'),
-      ),
+      builder: (context, state) => const LinemanProfileScreen(),
     ),
     GoRoute(
       path: '/lineman/notifications',
       name: 'lineman-notifications',
-      builder: (context, state) => const _SimpleScaffold(
-        title: AppStrings.linemanNotificationsTitle,
-        body: Text('Lineman-specific notifications.'),
-      ),
+      builder: (context, state) =>
+          const LinemanNotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/lineman/help',
+      name: 'lineman-help',
+      builder: (context, state) => const LinemanHelpScreen(),
     ),
   ],
 );

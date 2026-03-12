@@ -123,61 +123,64 @@ class MockData {
     ),
   ];
 
-  /// Mock tickets (1 pending, 1 in_progress, 1 resolved).
+  /// Mock tickets for lineman and subscriber flows.
   static List<TicketModel> tickets = [
     TicketModel(
-      id: 'ticket_001',
-      ticketNumber: 'RTC-TCK-2024-0001',
-      subscriberId: subscriberUser.id,
-      subscriberName: subscriberUser.name,
-      subscriberAddress: subscriberUser.address,
-      subscriberContact: subscriberUser.phone,
-      title: 'No internet connection',
+      id: 't1',
+      ticketNumber: 'TCK-2024-001',
+      subscriberId: '1',
+      subscriberName: 'Juan dela Cruz',
+      subscriberAddress: '123 Rizal St, Barangay Uno, Quezon City',
+      subscriberContact: '09171234567',
+      title: 'No Internet Connection',
       description:
-          'Our household has no internet connection since this morning. '
-          'The LOS light on the modem is blinking red.',
+          'My internet has been down since yesterday morning. '
+          'Router lights are all red. Already tried restarting.',
       category: 'No Connection',
-      status: 'pending',
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      assignedTo: null,
-      technicianNote: null,
-      resolvedAt: null,
+      status: 'resolved',
+      createdAt: DateTime(2024, 3, 1, 9, 0),
+      assignedTo: '2',
+      technicianNote:
+          'Found damaged outdoor cable. Replaced and tested. Connection restored.',
+      resolvedAt: DateTime(2024, 3, 1, 14, 30),
     ),
     TicketModel(
-      id: 'ticket_002',
-      ticketNumber: 'RTC-TCK-2024-0002',
-      subscriberId: subscriberUser.id,
-      subscriberName: subscriberUser.name,
-      subscriberAddress: subscriberUser.address,
-      subscriberContact: subscriberUser.phone,
-      title: 'Slow internet during peak hours',
+      id: 't2',
+      ticketNumber: 'TCK-2024-002',
+      subscriberId: '1',
+      subscriberName: 'Juan dela Cruz',
+      subscriberAddress: '123 Rizal St, Barangay Uno, Quezon City',
+      subscriberContact: '09171234567',
+      title: 'Very Slow Connection',
       description:
-          'Connection slows down every night around 8-10 PM. '
-          'Streaming becomes difficult even at low quality.',
+          'Internet speed is very slow especially at night. '
+          'Subscribed to 50Mbps but getting less than 5Mbps.',
       category: 'Slow Speed',
       status: 'in_progress',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      assignedTo: linemanUser.name,
-      technicianNote: 'Checked ONU levels remotely, will visit on-site today.',
+      createdAt: DateTime(2024, 3, 10, 11, 0),
+      assignedTo: '2',
+      technicianNote:
+          'Checked signal levels. Found noise on the line. Investigating further.',
       resolvedAt: null,
     ),
     TicketModel(
-      id: 'ticket_003',
-      ticketNumber: 'RTC-TCK-2024-0003',
-      subscriberId: subscriberUser.id,
-      subscriberName: subscriberUser.name,
-      subscriberAddress: subscriberUser.address,
-      subscriberContact: subscriberUser.phone,
-      title: 'Clarification on billing charges',
+      id: 't3',
+      ticketNumber: 'TCK-2024-003',
+      subscriberId: '1',
+      subscriberName: 'Juan dela Cruz',
+      subscriberAddress: '123 Rizal St, Barangay Uno, Quezon City',
+      subscriberContact: '09171234567',
+      title: 'Billing Concern',
       description:
-          'There is an additional charge on my latest bill that I do not recognize.',
+          'I was charged twice for the month of February. '
+          'Please check my account.',
       category: 'Billing Issue',
       status: 'resolved',
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      assignedTo: linemanUser.name,
+      createdAt: DateTime(2024, 3, 15, 8, 30),
+      assignedTo: '2',
       technicianNote:
-          'Explained prorated charges due to plan upgrade. Customer acknowledged.',
-      resolvedAt: DateTime.now().subtract(const Duration(days: 3)),
+          'Explained duplicated billing and requested reversal from billing team.',
+      resolvedAt: null,
     ),
   ];
 
