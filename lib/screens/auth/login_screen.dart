@@ -1,18 +1,23 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/services/auth_service.dart';
+import '../../core/utils/auth_role.dart';
 import '../../shared/widgets/app_card.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -28,9 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validateEmail(String? value) {
     final email = value?.trim() ?? '';
-    if (email.isEmpty) {
-      return 'Please enter your email address.';
-    }
+    if (email.isEmpty) return 'Please enter your email address.';
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
     if (!emailRegex.hasMatch(email)) {
       return 'Please enter a valid email address.';
@@ -40,54 +43,98 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validatePassword(String? value) {
     final pwd = value ?? '';
-    if (pwd.isEmpty) {
-      return 'Please enter your password.';
-    }
-    if (pwd.length < 6) {
-      return 'Password must be at least 6 characters.';
-    }
+    if (pwd.isEmpty) return 'Please enter your password.';
+    if (pwd.length < 6) return 'Password must be at least 6 characters.';
     return null;
   }
 
+  Future<void> _logoutUnsupportedRole() async {
+    await ref.read(authProvider.notifier).logout();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'This app is only for subscribers and field technicians. '
+          'Please use the correct account.',
+        ),
+        backgroundColor: AppColors.error,
+      ),
+    );
+  }
+
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 2));
+    await ref.read(authProvider.notifier).login(
+          _emailController.text.trim().toLowerCase(),
+          _passwordController.text,
+        );
 
-    final email = _emailController.text.trim().toLowerCase();
-    final password = _passwordController.text;
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-    if (email == 'subscriber@racitelcom.com' && password == 'password123') {
-      if (mounted) {
-        context.go('/subscriber/dashboard');
-      }
-    } else if (email == 'lineman@racitelcom.com' && password == 'password123') {
-      if (mounted) {
-        context.go('/lineman/dashboard');
-      }
-    } else {
-      if (mounted) {
+    final authState = ref.read(authProvider);
+
+    authState.when(
+      data: (user) {
+        if (user == null) return;
+        final route = dashboardRouteForRole(user.role);
+        if (route != null) {
+          context.go(route);
+        } else {
+          _logoutUnsupportedRole();
+        }
+      },
+      error: (e, _) {
+        final message = _errorMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Invalid email or password. Please try again.',
-            ),
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.error,
           ),
         );
+      },
+      loading: () {},
+    );
+  }
+
+  String _errorMessage(Object error) {
+    if (error is UnsupportedAppRoleException) {
+      return 'This app is only for subscribers and field technicians.';
+    }
+    if (error is DioException) {
+      final status = error.response?.statusCode;
+      final data = error.response?.data;
+
+      if (status == 401) {
+        return 'Invalid email or password. Please try again.';
+      }
+
+      if (status == 422) {
+        // Laravel returns { message: '...', errors: { field: [msg] } }
+        if (data is Map) {
+          final errors = data['errors'];
+          if (errors is Map && errors.isNotEmpty) {
+            final firstField = errors.values.first;
+            if (firstField is List && firstField.isNotEmpty) {
+              return firstField.first as String;
+            }
+          }
+          final msg = data['message'];
+          if (msg is String && msg.isNotEmpty) return msg;
+        }
+        return 'Please check your input and try again.';
+      }
+
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Cannot reach the server. Check your connection and try again.';
       }
     }
-
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    return 'Login failed. Please try again.';
   }
 
   @override
@@ -100,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Top blue decoration with logo and title.
+              // ── Header ───────────────────────────────────────────────────
               Container(
                 height: 200,
                 width: double.infinity,
@@ -140,9 +187,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+
+              // ── Form ─────────────────────────────────────────────────────
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 24,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -175,15 +226,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _passwordController,
                               decoration: InputDecoration(
                                 labelText: 'Password',
-                                prefixIcon:
-                                    const Icon(Icons.lock_outlined),
+                                prefixIcon: const Icon(Icons.lock_outlined),
                                 suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword =
-                                          !_obscurePassword;
-                                    });
-                                  },
+                                  onPressed: () => setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  }),
                                   icon: Icon(
                                     _obscurePassword
                                         ? Icons.visibility_off_outlined
@@ -195,20 +242,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               textInputAction: TextInputAction.done,
                               validator: _validatePassword,
                               onFieldSubmitted: (_) {
-                                if (!_isLoading) {
-                                  _handleLogin();
-                                }
+                                if (!_isLoading) _handleLogin();
                               },
                             ),
                             const SizedBox(height: 8),
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
-                                onPressed: () {
-                                  if (!_isLoading) {
-                                    context.push('/forgot-password');
-                                  }
-                                },
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => context.push('/forgot-password'),
                                 child: const Text(
                                   'Forgot Password?',
                                   style: TextStyle(
@@ -220,8 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             const SizedBox(height: 8),
                             ElevatedButton(
-                              onPressed:
-                                  _isLoading ? null : _handleLogin,
+                              onPressed: _isLoading ? null : _handleLogin,
                               child: _isLoading
                                   ? const SizedBox(
                                       width: 20,
@@ -250,94 +292,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    AppCard(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: AppColors.primaryBlue,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  'Demo Credentials',
-                                  style: TextStyle(
-                                    color: AppColors.primaryBlue,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.person_outline,
-                                      size: 16,
-                                      color: AppColors.textGray,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'Subscriber: subscriber@racitelcom.com',
-                                        style: TextStyle(
-                                          color: AppColors.textGray,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.person_outline,
-                                      size: 16,
-                                      color: AppColors.textGray,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'Lineman: lineman@racitelcom.com',
-                                        style: TextStyle(
-                                          color: AppColors.textGray,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.lock_outline,
-                                      size: 16,
-                                      color: AppColors.textGray,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Password: password123 (both accounts)',
-                                      style: TextStyle(
-                                        color: AppColors.textGray,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -348,4 +302,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

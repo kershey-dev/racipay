@@ -15,13 +15,6 @@ class AppStrings {
   static const String logoutButton = 'Log Out';
   static const String forgotPassword = 'Forgot Password?';
 
-  // Mock credentials info
-  static const String mockCredentialsTitle = 'Demo Login Accounts';
-  static const String mockSubscriberCredentials =
-      'Subscriber demo:\nEmail: subscriber@racitelcom.com\nPassword: racipay123';
-  static const String mockLinemanCredentials =
-      'Lineman demo:\nEmail: lineman@racitelcom.com\nPassword: racipay123';
-
   // Common buttons
   static const String buttonRetry = 'Try Again';
   static const String buttonSeeAll = 'See All';

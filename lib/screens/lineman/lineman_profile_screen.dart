@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../../mock/mock_data.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/info_row.dart';
 import '../../shared/widgets/section_header.dart';
 
-class LinemanProfileScreen extends StatelessWidget {
+class LinemanProfileScreen extends ConsumerWidget {
   const LinemanProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final user = MockData.linemanUser;
-    final initials = _initialsFromName(user.name);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).valueOrNull;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final initials = _initials(user.name);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -100,7 +108,7 @@ class LinemanProfileScreen extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      onTap: () => _confirmLogout(context),
+                      onTap: () => _confirmLogout(context, ref),
                     ),
                   ],
                 ),
@@ -118,10 +126,7 @@ class LinemanProfileScreen extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppColors.primaryBlue,
-            Color(0xFF1E40AF),
-          ],
+          colors: [AppColors.primaryBlue, Color(0xFF1E40AF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -189,7 +194,7 @@ class LinemanProfileScreen extends StatelessWidget {
     );
   }
 
-  String _initialsFromName(String name) {
+  String _initials(String name) {
     final parts = name.trim().split(' ');
     if (parts.length == 1) {
       return parts.first.isNotEmpty ? parts.first[0].toUpperCase() : '';
@@ -199,32 +204,28 @@ class LinemanProfileScreen extends StatelessWidget {
     return '$first$last';
   }
 
-  Future<void> _confirmLogout(BuildContext context) async {
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text(
-            'Are you sure you want to logout?',
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Logout'),
-            ),
-          ],
-        );
-      },
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true && context.mounted) {
-      context.go('/login');
+      await ref.read(authProvider.notifier).logout();
+      if (context.mounted) context.go('/login');
     }
   }
 }
-

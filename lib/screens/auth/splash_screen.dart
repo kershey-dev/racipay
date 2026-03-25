@@ -1,20 +1,21 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/utils/auth_role.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late final AnimationController _fadeController;
   late final Animation<double> _fadeAnimation;
@@ -24,8 +25,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   late final AnimationController _progressController;
   late final Animation<double> _progressAnimation;
-
-  Timer? _timer;
 
   @override
   void initState() {
@@ -46,10 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
     _progressController = AnimationController(
@@ -59,19 +55,39 @@ class _SplashScreenState extends State<SplashScreen>
     _progressAnimation =
         Tween<double>(begin: 0.0, end: 1.0).animate(_progressController);
 
-    _timer = Timer(
-      const Duration(milliseconds: 2500),
-      () {
-        if (mounted) {
-          context.go('/login');
-        }
-      },
-    );
+    // Run the minimum splash duration AND the token check in parallel.
+    // Navigation fires only after both complete.
+    _initAndNavigate();
+  }
+
+  Future<void> _initAndNavigate() async {
+    await Future.wait([
+      // Minimum display time keeps the animation smooth.
+      Future<void>.delayed(const Duration(milliseconds: 2500)),
+      // Attempt to restore a saved session.
+      ref.read(authProvider.notifier).restoreSession(),
+    ]);
+
+    if (!mounted) return;
+
+    final user = ref.read(authProvider).valueOrNull;
+
+    if (user != null) {
+      final route = dashboardRouteForRole(user.role);
+      if (route != null) {
+        context.go(route);
+      } else {
+        // Defensive: unsupported role should not reach here if API validates.
+        await ref.read(authProvider.notifier).logout();
+        if (mounted) context.go('/login');
+      }
+    } else {
+      context.go('/login');
+    }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _fadeController.dispose();
     _pulseController.dispose();
     _progressController.dispose();
@@ -177,4 +193,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-
